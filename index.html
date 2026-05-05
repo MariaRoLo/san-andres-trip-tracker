@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>San Andrés Trip Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  padding: 2rem 1rem;
+}
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  background: rgba(255, 255, 255, 0.98);
+  border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  overflow: hidden;
+}
+.header {
+  background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+  color: white;
+  padding: 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.header h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+}
+.header-info {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.9rem;
+  opacity: 0.9;
+}
+.admin-btn {
+  background: rgba(255,255,255,0.2);
+  border: 2px solid rgba(255,255,255,0.3);
+  color: white;
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s;
+  font-size: 0.9rem;
+}
+.admin-btn:hover {
+  background: rgba(255,255,255,0.3);
+  transform: translateY(-2px);
+}
+.content {
+  padding: 2rem;
+}
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+.stat-card {
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  border-radius: 12px;
+  padding: 1.5rem;
+  text-align: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #2a5298;
+  margin-bottom: 0.5rem;
+}
+.stat-label {
+  font-size: 0.85rem;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.table-wrapper {
+  overflow-x: auto;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+}
+thead {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+th {
+  padding: 1rem;
+  font-weight: 600;
+  text-align: left;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+tbody tr {
+  border-bottom: 1px solid #e0e0e0;
+  transition: background 0.2s;
+}
+tbody tr:hover {
+  background: #f8f9fa;
+}
+td {
+  padding: 1rem;
+  font-size: 0.9rem;
+}
+.payment-cell {
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+}
+.payment-status {
+  display: inline-block;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  line-height: 28px;
+  font-weight: 700;
+  transition: all 0.3s;
+}
+.payment-pending { background: #ffd93d; color: #856404; }
+.payment-confirmed { background: #6bcf7f; color: #155724; }
+.payment-unpaid { background: #e0e0e0; color: #999; }
+.modal {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.7);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+.modal.active { display: flex; }
+.modal-content {
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+.modal h2 {
+  margin-bottom: 1.5rem;
+  color: #2a5298;
+}
+.modal input {
+  width: 100%;
+  padding: 0.8rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+  margin-bottom: 1rem;
+  font-family: 'DM Sans', sans-serif;
+}
+.modal-buttons {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+.btn {
+  flex: 1;
+  padding: 0.8rem;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 0.95rem;
+}
+.btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+.btn-secondary {
+  background: #e0e0e0;
+  color: #555;
+}
+.btn-secondary:hover {
+  background: #d0d0d0;
+}
+.pending-section {
+  display: none;
+  margin-top: 2rem;
+  padding: 2rem;
+  background: #fff9e6;
+  border-radius: 12px;
+  border: 2px solid #ffd93d;
+}
+.pending-section.active { display: block; }
+.pending-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: white;
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+}
+.loading {
+  text-align: center;
+  padding: 3rem;
+  font-size: 1.2rem;
+  color: #667eea;
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <div>
+      <h1>🏝️ San Andrés Trip Tracker</h1>
+      <div class="header-info">
+        6 meses · 1 pago/mes · Monto variable por persona
+        <span id="lastRefresh" style="margin-left: 1rem; opacity: 0.7; font-size: 0.85em;"></span>
+      </div>
+    </div>
+    <div style="display: flex; gap: 0.5rem;">
+      <button class="admin-btn" onclick="loadData()" title="Actualizar datos">
+        🔄
+      </button>
+      <button class="admin-btn" onclick="openAdminModal()">🔐 Admin</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <div class="stats">
+      <div class="stat-card">
+        <div class="stat-value" id="totalPeople">—</div>
+        <div class="stat-label">Viajeros</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="totalExpected">—</div>
+        <div class="stat-label">Esperado</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="totalPaid">—</div>
+        <div class="stat-label">Pagado</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="totalPending">—</div>
+        <div class="stat-label">Pendiente</div>
+      </div>
+    </div>
+
+    <div class="loading" id="loading">Cargando datos...</div>
+
+    <div class="table-wrapper" id="tableWrapper" style="display:none;">
+      <table>
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th colspan="2">Mes 1</th>
+            <th colspan="2">Mes 2</th>
+            <th colspan="2">Mes 3</th>
+            <th colspan="2">Mes 4</th>
+            <th colspan="2">Mes 5</th>
+            <th colspan="2">Mes 6</th>
+            <th>Total</th>
+          </tr>
+          <tr>
+            <th></th>
+            <th>1</th><th>15</th>
+            <th>1</th><th>15</th>
+            <th>1</th><th>15</th>
+            <th>1</th><th>15</th>
+            <th>1</th><th>15</th>
+            <th>1</th><th>15</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+
+    <div class="pending-section" id="pendingSection">
+      <h3 style="margin-bottom: 1rem;">⏳ Pagos pendientes de confirmación</h3>
+      <div id="pendingList"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Admin Login -->
+<div class="modal" id="adminModal">
+  <div class="modal-content">
+    <h2>Acceso Admin</h2>
+    <input type="password" id="adminPassword" placeholder="Contraseña de administrador" />
+    <div class="modal-buttons">
+      <button class="btn btn-secondary" onclick="closeAdminModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="verifyAdmin()">Entrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Payment Request -->
+<div class="modal" id="paymentModal">
+  <div class="modal-content">
+    <h2>Marcar pago</h2>
+    <p id="paymentInfo"></p>
+    <input type="file" accept="image/*" id="proofFile" />
+    <div class="modal-buttons">
+      <button class="btn btn-secondary" onclick="closePaymentModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="submitPayment()">Enviar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Admin Confirm Payment (con comprobante) -->
+<div class="modal" id="adminConfirmModal">
+  <div class="modal-content">
+    <h2>Confirmar pago</h2>
+    <div id="confirmPaymentInfo" style="margin-bottom: 1rem;"></div>
+    <div id="proofContainer" style="text-align: center; margin: 1rem 0;">
+      <img id="proofImage" style="max-width: 100%; max-height: 400px; border-radius: 8px; display: none;" />
+      <p id="noProofMessage" style="color: #999; display: none;">Sin comprobante adjunto</p>
+    </div>
+    <div class="modal-buttons">
+      <button class="btn btn-secondary" onclick="rejectPayment()">❌ Rechazar</button>
+      <button class="btn btn-primary" onclick="approvePayment()">✅ Aprobar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Ver Comprobante (solo lectura) -->
+<div class="modal" id="viewProofModal">
+  <div class="modal-content">
+    <h2>Comprobante de Pago</h2>
+    <div id="viewProofInfo" style="margin-bottom: 1rem;"></div>
+    <div style="text-align: center; margin: 1rem 0;">
+      <img id="viewProofImage" style="max-width: 100%; max-height: 500px; border-radius: 8px;" />
+    </div>
+    <div class="modal-buttons">
+      <button class="btn btn-primary" onclick="closeViewProofModal()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyfuaXPxREUP-AK1t-7oKUtlLialiXjc0tN3k4TVoKmNmEaPciD0NWT9F_7G2EWfVUO/exec';
+
+let currentData = null;
+let isAdmin = false;
+let selectedPayment = null;
+let adminPasswordCache = null; // Cache para no pedir cada vez
+let currentPendingPayment = null; // Para modal de confirmación admin
+
+async function loadData() {
+  const refreshBtn = document.querySelector('button[title="Actualizar datos"]');
+  
+  try {
+    // Mostrar animación de carga
+    if (refreshBtn) {
+      refreshBtn.style.animation = 'spin 1s linear infinite';
+      refreshBtn.disabled = true;
+    }
+    
+    // Try direct fetch first
+    const response = await fetch(`${SCRIPT_URL}?action=read`);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    console.log('📦 Datos recibidos:', data);
+    
+    // Validar estructura
+    if (!data.travelers || !data.columns) {
+      console.error('❌ Estructura inválida:', data);
+      throw new Error('El backend no retornó la estructura esperada. Verifica que hayas actualizado Code.gs');
+    }
+    
+    currentData = data;
+    
+    try {
+      renderTable();
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('tableWrapper').style.display = 'block';
+    } catch (renderError) {
+      console.error('❌ Error renderizando tabla:', renderError);
+      throw new Error(`Error al renderizar: ${renderError.message}`);
+    }
+    
+    // Actualizar timestamp
+    const now = new Date();
+    document.getElementById('lastRefresh').textContent = 
+      `Actualizado: ${now.toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' })}`;
+  } catch (error) {
+    console.error('❌ Error cargando datos:', error);
+    console.error('Error name:', error.name);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    
+    // JSONP fallback - open in new window with instructions
+    document.getElementById('loading').innerHTML = `
+      ❌ Error al cargar datos.<br><br>
+      <strong>Error:</strong> ${error.message}<br><br>
+      <strong>Solución temporal:</strong><br>
+      1. <a href="${SCRIPT_URL}?action=read" target="_blank" style="color: #667eea; font-weight: 600;">Click aquí para abrir los datos</a><br>
+      2. Copia todo el JSON<br>
+      3. Pega abajo y click "Cargar"<br><br>
+      <textarea id="jsonInput" style="width: 100%; height: 120px; padding: 8px; border: 1px solid #ddd; border-radius: 8px; font-family: monospace; font-size: 12px;" placeholder='Pega el JSON aquí...'></textarea><br>
+      <button onclick="loadFromJSON()" style="margin-top: 8px; padding: 10px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600;">Cargar datos</button>
+      <br><br>
+      <small style="color: #999;">Revisa la consola (F12) para más detalles del error.</small>
+    `;
+  } finally {
+    // Limpiar animación de carga
+    if (refreshBtn) {
+      refreshBtn.style.animation = '';
+      refreshBtn.disabled = false;
+    }
+  }
+}
+
+function loadFromJSON() {
+  const json = document.getElementById('jsonInput').value.trim();
+  if (!json) {
+    alert('Pega el JSON primero');
+    return;
+  }
+  
+  try {
+    currentData = JSON.parse(json);
+    renderTable();
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('tableWrapper').style.display = 'block';
+  } catch (e) {
+    alert('JSON inválido: ' + e.message);
+  }
+}
+
+function renderTable() {
+  console.log('🎨 renderTable - data:', { 
+    travelers: currentData?.travelers?.length,
+    pending: currentData?.pending?.length,
+    columns: currentData?.columns?.length
+  });
+  
+  const tbody = document.getElementById('tbody');
+  const thead = document.querySelector('thead');
+  tbody.innerHTML = '';
+  
+  // Renderizar headers dinámicos desde backend
+  if (currentData.columns && currentData.columns.length > 0) {
+    let headerRow = '<tr><th>Nombre</th><th>$/mes</th>';
+    
+    currentData.columns.forEach(col => {
+      headerRow += `<th>${col.month}</th>`;
+    });
+    
+    headerRow += '<th>Total</th></tr>';
+    
+    thead.innerHTML = headerRow;
+  }
+  
+  let totalExpected = 0;
+  let totalPaid = 0;
+  let totalPending = 0;
+  
+  currentData.travelers.forEach(traveler => {
+    const row = document.createElement('tr');
+    let html = `<td><strong>${traveler.name}</strong></td>`;
+    html += `<td style="text-align: center;">$${(traveler.amountPerPayment || 800).toLocaleString()}</td>`;
+    
+    traveler.payments.forEach((paid, idx) => {
+      const col = currentData.columns[idx];
+      const columnName = col.month; // Solo mes, sin día
+      
+      const isPending = currentData.pending.some(p => 
+        p.name === traveler.name && p.paymentColumn === columnName
+      );
+      
+      // Verificar si hay comprobante guardado
+      const proofKey = `${traveler.name}_${columnName}`;
+      const hasProof = currentData.proofs && currentData.proofs[proofKey];
+      
+      const status = paid === true ? 'confirmed' : 
+                     (paid === '⏳' || isPending) ? 'pending' : 'unpaid';
+      const icon = paid === true ? '✓' : 
+                   (paid === '⏳' || isPending) ? '⏳' : '○';
+      
+      // Si está confirmado Y tiene comprobante, mostrar ícono clickeable
+      if (paid === true && hasProof) {
+        html += `<td class="payment-cell" onclick="showProof('${traveler.name}', '${columnName}')" title="Ver comprobante">
+          <span class="payment-status payment-${status}">${icon}</span>
+          <span style="font-size: 0.7em; margin-left: 2px;">📎</span>
+        </td>`;
+      } else {
+        html += `<td class="payment-cell" onclick="handlePaymentClick('${traveler.name}', '${columnName}', ${paid === true})">
+          <span class="payment-status payment-${status}">${icon}</span>
+        </td>`;
+      }
+    });
+    
+    html += `<td><strong>$${(traveler.totalPaid || 0).toLocaleString()}</strong></td>`;
+    row.innerHTML = html;
+    tbody.appendChild(row);
+    
+    const amount = traveler.amountPerPayment || 800;
+    totalExpected += 6 * amount; // 6 meses
+    totalPaid += traveler.totalPaid || 0;
+  });
+  
+  totalPending = currentData.pending.length;
+  
+  document.getElementById('totalPeople').textContent = currentData.travelers.length;
+  document.getElementById('totalExpected').textContent = `$${totalExpected.toLocaleString()}`;
+  document.getElementById('totalPaid').textContent = `$${totalPaid.toLocaleString()}`;
+  document.getElementById('totalPending').textContent = totalPending;
+  
+  if (isAdmin && totalPending > 0) {
+    renderPendingList();
+  }
+}
+
+function handlePaymentClick(name, column, isPaid) {
+  if (isPaid) return;
+  
+  if (isAdmin) {
+    // Admin ve modal de confirmación con comprobante
+    const pending = currentData.pending.find(p => 
+      p.name === name && p.paymentColumn === column
+    );
+    
+    if (pending) {
+      showAdminConfirmModal(pending);
+    } else {
+      alert('No hay solicitud pendiente para este pago');
+    }
+  } else {
+    // Usuario marca como pagado
+    selectedPayment = { name, column };
+    document.getElementById('paymentInfo').textContent = 
+      `Marcando pago para ${name} - ${column}`; // Solo mes
+    document.getElementById('paymentModal').classList.add('active');
+  }
+}
+
+async function submitPayment() {
+  const fileInput = document.getElementById('proofFile');
+  let proofURL = '';
+  
+  if (fileInput.files.length > 0) {
+    const file = fileInput.files[0];
+    const reader = new FileReader();
+    
+    proofURL = await new Promise((resolve) => {
+      reader.onload = (e) => resolve(e.target.result);
+      reader.readAsDataURL(file);
+    });
+  }
+  
+  const response = await fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({
+      action: 'request-payment',
+      name: selectedPayment.name,
+      paymentColumn: selectedPayment.column,
+      proofURL: proofURL
+    })
+  });
+  
+  const result = await response.json();
+  
+  if (result.success) {
+    alert('✓ Solicitud enviada. El admin confirmará tu pago.');
+    closePaymentModal();
+    await loadData(); // Esperar refresh
+  } else {
+    alert('Error: ' + result.error);
+  }
+}
+
+async function confirmPaymentDirect(name, column) {
+  console.log('🔍 Debug confirmPaymentDirect:', { 
+    isAdmin, 
+    hasCache: !!adminPasswordCache,
+    cacheValue: adminPasswordCache ? '***' : null,
+    name,
+    column
+  });
+  
+  // Usar contraseña cacheada si admin está logueado
+  const password = adminPasswordCache || prompt('Contraseña de admin:');
+  if (!password) return;
+  
+  console.log('📤 Enviando request:', { name, column });
+  
+  const response = await fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({
+      action: 'confirm-payment',
+      name: name,
+      paymentColumn: column,
+      adminPassword: password
+    })
+  });
+  
+  const result = await response.json();
+  console.log('📥 Respuesta del backend:', result);
+  
+  if (result.success) {
+    alert('✓ Pago confirmado');
+    console.log('🔄 Recargando datos...');
+    await loadData();
+    console.log('✅ Datos recargados');
+  } else {
+    alert('Error: ' + result.error);
+    console.log('❌ Error:', result.error);
+    // Si falló, limpiar cache (puede haber expirado)
+    adminPasswordCache = null;
+    isAdmin = false;
+  }
+}
+
+function renderPendingList() {
+  const list = document.getElementById('pendingList');
+  list.innerHTML = '';
+  
+  currentData.pending.forEach(p => {
+    const div = document.createElement('div');
+    div.className = 'pending-item';
+    div.innerHTML = `
+      <div>
+        <strong>${p.name}</strong> - ${p.paymentColumn}
+        <br><small>${new Date(p.timestamp).toLocaleString()}</small>
+      </div>
+      <button class="btn btn-primary" onclick='showAdminConfirmModal(${JSON.stringify(p)})'>
+        👁️ Revisar
+      </button>
+    `;
+    list.appendChild(div);
+  });
+  
+  document.getElementById('pendingSection').classList.add('active');
+}
+
+function openAdminModal() {
+  document.getElementById('adminModal').classList.add('active');
+}
+
+function closeAdminModal() {
+  document.getElementById('adminModal').classList.remove('active');
+}
+
+async function verifyAdmin() {
+  const password = document.getElementById('adminPassword').value;
+  console.log('🔐 verifyAdmin - password length:', password.length);
+  
+  // Hash password
+  const msgUint8 = new TextEncoder().encode(password);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  
+  console.log('🔐 Hashes:', { 
+    computed: hashHex.substring(0, 20) + '...', 
+    stored: currentData.adminHash.substring(0, 20) + '...',
+    match: hashHex === currentData.adminHash
+  });
+  
+  if (hashHex === currentData.adminHash) {
+    isAdmin = true;
+    adminPasswordCache = password; // Guardar para confirmaciones
+    console.log('✅ Cache guardada, length:', adminPasswordCache.length);
+    alert('✓ Acceso admin concedido');
+    closeAdminModal();
+    renderTable();
+  } else {
+    alert('❌ Contraseña incorrecta');
+  }
+}
+
+function closePaymentModal() {
+  document.getElementById('paymentModal').classList.remove('active');
+  document.getElementById('proofFile').value = '';
+}
+
+function showAdminConfirmModal(pending) {
+  currentPendingPayment = pending;
+  
+  document.getElementById('confirmPaymentInfo').innerHTML = 
+    `<strong>${pending.name}</strong><br>${pending.paymentColumn}<br><small>${new Date(pending.timestamp).toLocaleString()}</small>`;
+  
+  const proofImg = document.getElementById('proofImage');
+  const noProofMsg = document.getElementById('noProofMessage');
+  
+  if (pending.proofURL) {
+    proofImg.src = pending.proofURL;
+    proofImg.style.display = 'block';
+    noProofMsg.style.display = 'none';
+  } else {
+    proofImg.style.display = 'none';
+    noProofMsg.style.display = 'block';
+  }
+  
+  document.getElementById('adminConfirmModal').classList.add('active');
+}
+
+function closeAdminConfirmModal() {
+  document.getElementById('adminConfirmModal').classList.remove('active');
+  currentPendingPayment = null;
+}
+
+function showProof(name, column) {
+  const proofKey = `${name}_${column}`;
+  const proofURL = currentData.proofs?.[proofKey];
+  
+  if (!proofURL) {
+    alert('No hay comprobante guardado para este pago');
+    return;
+  }
+  
+  document.getElementById('viewProofInfo').innerHTML = 
+    `<strong>${name}</strong><br>${column}`;
+  document.getElementById('viewProofImage').src = proofURL;
+  document.getElementById('viewProofModal').classList.add('active');
+}
+
+function closeViewProofModal() {
+  document.getElementById('viewProofModal').classList.remove('active');
+}
+
+async function approvePayment() {
+  if (!currentPendingPayment) return;
+  
+  console.log('✅ Aprobando pago...');
+  await confirmPaymentDirect(currentPendingPayment.name, currentPendingPayment.paymentColumn);
+  closeAdminConfirmModal();
+  
+  // Auto-refresh después de aprobar
+  console.log('🔄 Auto-refresh post-aprobación...');
+  await loadData();
+}
+
+async function rejectPayment() {
+  if (!currentPendingPayment) return;
+  
+  const confirmed = confirm(`¿Rechazar pago de ${currentPendingPayment.name}? Esto eliminará la solicitud.`);
+  if (!confirmed) return;
+  
+  // Eliminar de PendingPayments sin confirmar en Travelers
+  const response = await fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify({
+      action: 'reject-payment',
+      name: currentPendingPayment.name,
+      paymentColumn: currentPendingPayment.paymentColumn,
+      adminPassword: adminPasswordCache
+    })
+  });
+  
+  const result = await response.json();
+  
+  if (result.success) {
+    alert('❌ Pago rechazado');
+    closeAdminConfirmModal();
+    await loadData();
+  } else {
+    alert('Error: ' + result.error);
+  }
+}
+
+// Load on start
+loadData();
+
+// Auto-refresh cada 30s
+let refreshInterval = setInterval(async () => {
+  console.log('🔄 Auto-refresh (30s)...');
+  await loadData();
+}, 30000);
+</script>
+
+</body>
+</html>
