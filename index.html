@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>San Andrés - 15 años Hellem</title>
+<title>San Andrés Trip Tracker</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -233,9 +233,9 @@ td {
 <div class="container">
   <div class="header">
     <div>
-      <h1>🏝️ 15 años Hellem</h1>
+      <h1>🏝️ San Andrés Trip Tracker</h1>
       <div class="header-info">
-        5 meses · 1 pago/mes · Monto variable por persona
+        6 meses · 1 pago/mes · Monto variable por persona
         <span id="lastRefresh" style="margin-left: 1rem; opacity: 0.7; font-size: 0.85em;"></span>
       </div>
     </div>
@@ -251,7 +251,7 @@ td {
     <div class="stats">
       <div class="stat-card">
         <div class="stat-value" id="totalPeople">—</div>
-        <div class="stat-label">Grupos</div>
+        <div class="stat-label">Viajeros</div>
       </div>
       <div class="stat-card">
         <div class="stat-value" id="totalExpected">—</div>
@@ -321,7 +321,9 @@ td {
   <div class="modal-content">
     <h2>Marcar pago</h2>
     <p id="paymentInfo"></p>
-    <input type="file" accept="image/*" id="proofFile" />
+    <label>Adjuntar comprobante(s) (opcional):</label>
+    <input type="file" accept="image/*" id="proofFile" multiple />
+    <small style="display: block; color: #999; margin-top: 5px;">Puedes seleccionar varias imágenes si pagan varias personas juntas</small>
     <div class="modal-buttons">
       <button class="btn btn-secondary" onclick="closePaymentModal()">Cancelar</button>
       <button class="btn btn-primary" onclick="submitPayment()">Enviar</button>
@@ -334,8 +336,8 @@ td {
   <div class="modal-content">
     <h2>Confirmar pago</h2>
     <div id="confirmPaymentInfo" style="margin-bottom: 1rem;"></div>
-    <div id="proofContainer" style="text-align: center; margin: 1rem 0;">
-      <img id="proofImage" style="max-width: 100%; max-height: 400px; border-radius: 8px; display: none;" />
+    <div id="proofContainer" style="text-align: center; margin: 1rem 0; max-height: 500px; overflow-y: auto;">
+      <div id="proofGallery" style="display: flex; flex-direction: column; gap: 1rem; align-items: center;"></div>
       <p id="noProofMessage" style="color: #999; display: none;">Sin comprobante adjunto</p>
     </div>
     <div class="modal-buttons">
@@ -348,10 +350,10 @@ td {
 <!-- Modal Ver Comprobante (solo lectura) -->
 <div class="modal" id="viewProofModal">
   <div class="modal-content">
-    <h2>Comprobante de Pago</h2>
+    <h2>Comprobante(s) de Pago</h2>
     <div id="viewProofInfo" style="margin-bottom: 1rem;"></div>
-    <div style="text-align: center; margin: 1rem 0;">
-      <img id="viewProofImage" style="max-width: 100%; max-height: 500px; border-radius: 8px;" />
+    <div style="text-align: center; margin: 1rem 0; max-height: 600px; overflow-y: auto;">
+      <div id="viewProofGallery" style="display: flex; flex-direction: column; gap: 1rem; align-items: center;"></div>
     </div>
     <div class="modal-buttons">
       <button class="btn btn-primary" onclick="closeViewProofModal()">Cerrar</button>
@@ -506,9 +508,11 @@ function renderTable() {
       
       // Si está confirmado Y tiene comprobante, mostrar ícono clickeable
       if (paid === true && hasProof) {
-        html += `<td class="payment-cell" onclick="showProof('${traveler.name}', '${columnName}')" title="Ver comprobante">
+        const imageCount = hasProof.split('|||').filter(u => u.trim()).length;
+        const badge = imageCount > 1 ? `<sup style="font-size: 0.6em;">${imageCount}</sup>` : '';
+        html += `<td class="payment-cell" onclick="showProof('${traveler.name}', '${columnName}')" title="Ver ${imageCount} comprobante(s)">
           <span class="payment-status payment-${status}">${icon}</span>
-          <span style="font-size: 0.7em; margin-left: 2px;">📎</span>
+          <span style="font-size: 0.7em; margin-left: 2px;">📎${badge}</span>
         </td>`;
       } else {
         html += `<td class="payment-cell" onclick="handlePaymentClick('${traveler.name}', '${columnName}', ${paid === true})">
@@ -563,17 +567,31 @@ function handlePaymentClick(name, column, isPaid) {
 
 async function submitPayment() {
   const fileInput = document.getElementById('proofFile');
-  let proofURL = '';
+  let proofURLs = [];
   
   if (fileInput.files.length > 0) {
-    const file = fileInput.files[0];
-    const reader = new FileReader();
-    
-    proofURL = await new Promise((resolve) => {
-      reader.onload = (e) => resolve(e.target.result);
-      reader.readAsDataURL(file);
-    });
+    // Procesar todas las imágenes seleccionadas
+    for (let i = 0; i < fileInput.files.length; i++) {
+      const file = fileInput.files[i];
+      
+      // Validar tamaño (máx 50KB por imagen)
+      if (file.size > 50000) {
+        alert(`Imagen ${i+1} muy grande (máx 50KB). Comprime las imágenes antes de subir.`);
+        return;
+      }
+      
+      const base64 = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.readAsDataURL(file);
+      });
+      
+      proofURLs.push(base64);
+    }
   }
+  
+  // Concatenar todas las URLs con separador
+  const proofURL = proofURLs.join('|||'); // Separador: |||
   
   const response = await fetch(SCRIPT_URL, {
     method: 'POST',
@@ -588,7 +606,7 @@ async function submitPayment() {
   const result = await response.json();
   
   if (result.success) {
-    alert('✓ Solicitud enviada. El admin confirmará tu pago.');
+    alert(`✓ Solicitud enviada con ${proofURLs.length} comprobante(s). El admin confirmará tu pago.`);
     closePaymentModal();
     await loadData(); // Esperar refresh
   } else {
@@ -707,15 +725,26 @@ function showAdminConfirmModal(pending) {
   document.getElementById('confirmPaymentInfo').innerHTML = 
     `<strong>${pending.name}</strong><br>${pending.paymentColumn}<br><small>${new Date(pending.timestamp).toLocaleString()}</small>`;
   
-  const proofImg = document.getElementById('proofImage');
+  const gallery = document.getElementById('proofGallery');
   const noProofMsg = document.getElementById('noProofMessage');
   
   if (pending.proofURL) {
-    proofImg.src = pending.proofURL;
-    proofImg.style.display = 'block';
+    // Separar múltiples URLs (separador: |||)
+    const urls = pending.proofURL.split('|||').filter(u => u.trim());
+    
+    gallery.innerHTML = '';
+    urls.forEach((url, idx) => {
+      const img = document.createElement('img');
+      img.src = url;
+      img.style.cssText = 'max-width: 100%; max-height: 400px; border-radius: 8px; border: 2px solid #ddd;';
+      img.alt = `Comprobante ${idx + 1}`;
+      gallery.appendChild(img);
+    });
+    
+    gallery.style.display = 'flex';
     noProofMsg.style.display = 'none';
   } else {
-    proofImg.style.display = 'none';
+    gallery.style.display = 'none';
     noProofMsg.style.display = 'block';
   }
   
@@ -738,7 +767,21 @@ function showProof(name, column) {
   
   document.getElementById('viewProofInfo').innerHTML = 
     `<strong>${name}</strong><br>${column}`;
-  document.getElementById('viewProofImage').src = proofURL;
+  
+  const gallery = document.getElementById('viewProofGallery');
+  
+  // Separar múltiples URLs
+  const urls = proofURL.split('|||').filter(u => u.trim());
+  
+  gallery.innerHTML = '';
+  urls.forEach((url, idx) => {
+    const img = document.createElement('img');
+    img.src = url;
+    img.style.cssText = 'max-width: 100%; max-height: 500px; border-radius: 8px; border: 2px solid #ddd;';
+    img.alt = `Comprobante ${idx + 1}`;
+    gallery.appendChild(img);
+  });
+  
   document.getElementById('viewProofModal').classList.add('active');
 }
 
