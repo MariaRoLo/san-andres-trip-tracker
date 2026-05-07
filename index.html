@@ -574,12 +574,6 @@ async function submitPayment() {
     for (let i = 0; i < fileInput.files.length; i++) {
       const file = fileInput.files[i];
       
-      // Validar tamaño (máx 50KB por imagen)
-      if (file.size > 50000) {
-        alert(`Imagen ${i+1} muy grande (máx 50KB). Comprime las imágenes antes de subir.`);
-        return;
-      }
-      
       const base64 = await new Promise((resolve) => {
         const reader = new FileReader();
         reader.onload = (e) => resolve(e.target.result);
