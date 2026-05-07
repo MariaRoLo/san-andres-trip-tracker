@@ -369,6 +369,7 @@ let isAdmin = false;
 let selectedPayment = null;
 let adminPasswordCache = null; // Cache para no pedir cada vez
 let currentPendingPayment = null; // Para modal de confirmación admin
+let isProcessing = false; // Flag para bloquear operaciones duplicadas
 
 async function loadData() {
   const refreshBtn = document.querySelector('button[title="Actualizar datos"]');
@@ -544,6 +545,10 @@ function renderTable() {
 
 function handlePaymentClick(name, column, isPaid) {
   if (isPaid) return;
+  if (isProcessing) {
+    alert('⏳ Ya hay una operación en proceso, espera un momento...');
+    return;
+  }
   
   if (isAdmin) {
     // Admin ve modal de confirmación con comprobante
@@ -567,44 +572,66 @@ function handlePaymentClick(name, column, isPaid) {
 
 async function submitPayment() {
   const fileInput = document.getElementById('proofFile');
-  let proofURLs = [];
+  const submitBtn = document.querySelector('#paymentModal .btn-primary');
+  const originalText = submitBtn.textContent;
   
-  if (fileInput.files.length > 0) {
-    // Procesar todas las imágenes seleccionadas
-    for (let i = 0; i < fileInput.files.length; i++) {
-      const file = fileInput.files[i];
-      
-      const base64 = await new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = (e) => resolve(e.target.result);
-        reader.readAsDataURL(file);
-      });
-      
-      proofURLs.push(base64);
+  // Bloquear botón y operaciones
+  isProcessing = true;
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Enviando...';
+  
+  try {
+    let proofURLs = [];
+    
+    if (fileInput.files.length > 0) {
+      // Procesar todas las imágenes seleccionadas
+      for (let i = 0; i < fileInput.files.length; i++) {
+        const file = fileInput.files[i];
+        
+        submitBtn.textContent = `Procesando imagen ${i+1}/${fileInput.files.length}...`;
+        
+        const base64 = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target.result);
+          reader.readAsDataURL(file);
+        });
+        
+        proofURLs.push(base64);
+      }
     }
-  }
-  
-  // Concatenar todas las URLs con separador
-  const proofURL = proofURLs.join('|||'); // Separador: |||
-  
-  const response = await fetch(SCRIPT_URL, {
-    method: 'POST',
-    body: JSON.stringify({
-      action: 'request-payment',
-      name: selectedPayment.name,
-      paymentColumn: selectedPayment.column,
-      proofURL: proofURL
-    })
-  });
-  
-  const result = await response.json();
-  
-  if (result.success) {
-    alert(`✓ Solicitud enviada con ${proofURLs.length} comprobante(s). El admin confirmará tu pago.`);
-    closePaymentModal();
-    await loadData(); // Esperar refresh
-  } else {
-    alert('Error: ' + result.error);
+    
+    // Concatenar todas las URLs con separador
+    const proofURL = proofURLs.join('|||'); // Separador: |||
+    
+    submitBtn.textContent = 'Enviando al servidor...';
+    
+    const response = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'request-payment',
+        name: selectedPayment.name,
+        paymentColumn: selectedPayment.column,
+        proofURL: proofURL
+      })
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      alert(`✓ Solicitud enviada con ${proofURLs.length} comprobante(s). El admin confirmará tu pago.`);
+      closePaymentModal();
+      await loadData(); // Esperar refresh
+    } else {
+      alert('Error: ' + result.error);
+    }
+  } catch (error) {
+    console.error('Error en submitPayment:', error);
+    alert('Error al enviar: ' + error.message);
+  } finally {
+    // Restaurar botón y flag
+    isProcessing = false;
+    submitBtn.disabled = false;
+    submitBtn.textContent = originalText;
   }
 }
 
@@ -786,13 +813,31 @@ function closeViewProofModal() {
 async function approvePayment() {
   if (!currentPendingPayment) return;
   
-  console.log('✅ Aprobando pago...');
-  await confirmPaymentDirect(currentPendingPayment.name, currentPendingPayment.paymentColumn);
-  closeAdminConfirmModal();
+  const approveBtn = document.querySelector('#adminConfirmModal .btn-primary');
+  const originalText = approveBtn.textContent;
   
-  // Auto-refresh después de aprobar
-  console.log('🔄 Auto-refresh post-aprobación...');
-  await loadData();
+  // Bloquear botón y operaciones
+  isProcessing = true;
+  approveBtn.disabled = true;
+  approveBtn.textContent = '⏳ Aprobando...';
+  
+  try {
+    console.log('✅ Aprobando pago...');
+    await confirmPaymentDirect(currentPendingPayment.name, currentPendingPayment.paymentColumn);
+    closeAdminConfirmModal();
+    
+    // Auto-refresh después de aprobar
+    console.log('🔄 Auto-refresh post-aprobación...');
+    await loadData();
+  } catch (error) {
+    console.error('Error al aprobar:', error);
+    alert('Error al aprobar: ' + error.message);
+  } finally {
+    // Restaurar botón y flag
+    isProcessing = false;
+    approveBtn.disabled = false;
+    approveBtn.textContent = originalText;
+  }
 }
 
 async function rejectPayment() {
@@ -801,25 +846,43 @@ async function rejectPayment() {
   const confirmed = confirm(`¿Rechazar pago de ${currentPendingPayment.name}? Esto eliminará la solicitud.`);
   if (!confirmed) return;
   
-  // Eliminar de PendingPayments sin confirmar en Travelers
-  const response = await fetch(SCRIPT_URL, {
-    method: 'POST',
-    body: JSON.stringify({
-      action: 'reject-payment',
-      name: currentPendingPayment.name,
-      paymentColumn: currentPendingPayment.paymentColumn,
-      adminPassword: adminPasswordCache
-    })
-  });
+  const rejectBtn = document.querySelector('#adminConfirmModal .btn-secondary');
+  const originalText = rejectBtn.textContent;
   
-  const result = await response.json();
+  // Bloquear botón y operaciones
+  isProcessing = true;
+  rejectBtn.disabled = true;
+  rejectBtn.textContent = '⏳ Rechazando...';
   
-  if (result.success) {
-    alert('❌ Pago rechazado');
-    closeAdminConfirmModal();
-    await loadData();
-  } else {
-    alert('Error: ' + result.error);
+  try {
+    // Eliminar de PendingPayments sin confirmar en Travelers
+    const response = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'reject-payment',
+        name: currentPendingPayment.name,
+        paymentColumn: currentPendingPayment.paymentColumn,
+        adminPassword: adminPasswordCache
+      })
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      alert('❌ Pago rechazado');
+      closeAdminConfirmModal();
+      await loadData();
+    } else {
+      alert('Error: ' + result.error);
+    }
+  } catch (error) {
+    console.error('Error al rechazar:', error);
+    alert('Error al rechazar: ' + error.message);
+  } finally {
+    // Restaurar botón y flag
+    isProcessing = false;
+    rejectBtn.disabled = false;
+    rejectBtn.textContent = originalText;
   }
 }
 
