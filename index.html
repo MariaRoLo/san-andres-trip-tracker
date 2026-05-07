@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>San Andrés - 15 años Hellem</title>
+<title>San Andrés Trip Tracker</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -233,7 +233,7 @@ td {
 <div class="container">
   <div class="header">
     <div>
-      <h1>🏝️ San Andrés - 15 años Hellem</h1>
+      <h1>🏝️ San Andrés Trip Tracker</h1>
       <div class="header-info">
         6 meses · 1 pago/mes · Monto variable por persona
         <span id="lastRefresh" style="margin-left: 1rem; opacity: 0.7; font-size: 0.85em;"></span>
@@ -251,7 +251,7 @@ td {
     <div class="stats">
       <div class="stat-card">
         <div class="stat-value" id="totalPeople">—</div>
-        <div class="stat-label">Grupos</div>
+        <div class="stat-label">Viajeros</div>
       </div>
       <div class="stat-card">
         <div class="stat-value" id="totalExpected">—</div>
@@ -357,6 +357,32 @@ td {
     </div>
     <div class="modal-buttons">
       <button class="btn btn-primary" onclick="closeViewProofModal()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Editar Solicitud Pendiente -->
+<div class="modal" id="editPendingModal">
+  <div class="modal-content">
+    <h2>Solicitud Pendiente</h2>
+    <div id="editPendingInfo" style="margin-bottom: 1rem;"></div>
+    
+    <div style="background: #fff9e6; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border-left: 4px solid #ffc107;">
+      <strong>⏳ Esperando aprobación del admin</strong>
+      <p style="margin: 0.5rem 0 0 0; font-size: 0.9em; color: #666;">
+        Tu solicitud fue enviada el <span id="editPendingTimestamp"></span>
+      </p>
+    </div>
+    
+    <div style="text-align: center; margin: 1rem 0; max-height: 400px; overflow-y: auto;">
+      <p style="font-weight: 600; margin-bottom: 0.5rem;">Comprobante(s) adjunto(s):</p>
+      <div id="editPendingGallery" style="display: flex; flex-direction: column; gap: 1rem; align-items: center;"></div>
+      <p id="editNoPendingProof" style="color: #999; display: none;">Sin comprobantes adjuntos</p>
+    </div>
+    
+    <div class="modal-buttons">
+      <button class="btn btn-secondary" onclick="cancelPendingRequest()">❌ Cancelar solicitud</button>
+      <button class="btn btn-primary" onclick="closeEditPendingModal()">Cerrar</button>
     </div>
   </div>
 </div>
@@ -550,23 +576,30 @@ function handlePaymentClick(name, column, isPaid) {
     return;
   }
   
+  // Verificar si hay solicitud pendiente del usuario
+  const pending = currentData.pending.find(p => 
+    p.name === name && p.paymentColumn === column
+  );
+  
   if (isAdmin) {
     // Admin ve modal de confirmación con comprobante
-    const pending = currentData.pending.find(p => 
-      p.name === name && p.paymentColumn === column
-    );
-    
     if (pending) {
       showAdminConfirmModal(pending);
     } else {
       alert('No hay solicitud pendiente para este pago');
     }
   } else {
-    // Usuario marca como pagado
-    selectedPayment = { name, column };
-    document.getElementById('paymentInfo').textContent = 
-      `Marcando pago para ${name} - ${column}`; // Solo mes
-    document.getElementById('paymentModal').classList.add('active');
+    // Usuario normal
+    if (pending) {
+      // Si ya tiene solicitud pendiente, mostrar modal de edición
+      showEditPendingModal(pending);
+    } else {
+      // Si no tiene, crear nueva solicitud
+      selectedPayment = { name, column };
+      document.getElementById('paymentInfo').textContent = 
+        `Marcando pago para ${name} - ${column}`;
+      document.getElementById('paymentModal').classList.add('active');
+    }
   }
 }
 
@@ -808,6 +841,91 @@ function showProof(name, column) {
 
 function closeViewProofModal() {
   document.getElementById('viewProofModal').classList.remove('active');
+}
+
+function showEditPendingModal(pending) {
+  currentPendingPayment = pending;
+  
+  document.getElementById('editPendingInfo').innerHTML = 
+    `<strong>${pending.name}</strong><br>${pending.paymentColumn}`;
+  
+  document.getElementById('editPendingTimestamp').textContent = 
+    new Date(pending.timestamp).toLocaleString('es-CO');
+  
+  const gallery = document.getElementById('editPendingGallery');
+  const noProofMsg = document.getElementById('editNoPendingProof');
+  
+  if (pending.proofURL) {
+    const urls = pending.proofURL.split('|||').filter(u => u.trim());
+    
+    gallery.innerHTML = '';
+    urls.forEach((url, idx) => {
+      const img = document.createElement('img');
+      img.src = url;
+      img.style.cssText = 'max-width: 100%; max-height: 300px; border-radius: 8px; border: 2px solid #ddd;';
+      img.alt = `Comprobante ${idx + 1}`;
+      gallery.appendChild(img);
+    });
+    
+    gallery.style.display = 'flex';
+    noProofMsg.style.display = 'none';
+  } else {
+    gallery.style.display = 'none';
+    noProofMsg.style.display = 'block';
+  }
+  
+  document.getElementById('editPendingModal').classList.add('active');
+}
+
+function closeEditPendingModal() {
+  document.getElementById('editPendingModal').classList.remove('active');
+  currentPendingPayment = null;
+}
+
+async function cancelPendingRequest() {
+  if (!currentPendingPayment) return;
+  
+  const confirmed = confirm(
+    `¿Cancelar tu solicitud de pago para ${currentPendingPayment.paymentColumn}?\n\n` +
+    `Podrás enviar una nueva solicitud con otros comprobantes después.`
+  );
+  
+  if (!confirmed) return;
+  
+  const cancelBtn = document.querySelector('#editPendingModal .btn-secondary');
+  const originalText = cancelBtn.textContent;
+  
+  isProcessing = true;
+  cancelBtn.disabled = true;
+  cancelBtn.textContent = '⏳ Cancelando...';
+  
+  try {
+    const response = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({
+        action: 'cancel-pending',
+        name: currentPendingPayment.name,
+        paymentColumn: currentPendingPayment.paymentColumn
+      })
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      alert('✓ Solicitud cancelada. Ahora puedes enviar una nueva.');
+      closeEditPendingModal();
+      await loadData();
+    } else {
+      alert('Error: ' + result.error);
+    }
+  } catch (error) {
+    console.error('Error al cancelar:', error);
+    alert('Error al cancelar: ' + error.message);
+  } finally {
+    isProcessing = false;
+    cancelBtn.disabled = false;
+    cancelBtn.textContent = originalText;
+  }
 }
 
 async function approvePayment() {
